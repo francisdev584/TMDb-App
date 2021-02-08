@@ -50,7 +50,7 @@ const MovieDetails: React.FC<IMovie> = () => {
   const { MovieData } = route.params;
 
   return (
-    <ScrollView horizontal showsVerticalScrollIndicator>
+    <ScrollView style={{ flex: 1 }}>
       <Container>
         {MovieData && (
           <Movie key={MovieData.id}>

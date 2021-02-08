@@ -18,9 +18,8 @@ export const ContentContainer = styled.View`
 
 export const Movie = styled.View`
   border-radius: 60px;
-  height: 400px;
-  width: auto;
-  flex: auto;
+  height: 100%;
+  width: 100%;
   background: #0d253f;
 `;
 
