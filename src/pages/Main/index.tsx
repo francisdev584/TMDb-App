@@ -1,6 +1,7 @@
 /* eslint-disable camelcase */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FlatList } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import ProgressCircle from 'react-native-progress-circle';
 
 import api from '../../services/api';
@@ -25,6 +26,20 @@ interface IMovies {
   vote: number;
 }
 
+interface IMovie {
+  id: number;
+  poster: string;
+  budget: number;
+  genres: {
+    id: number;
+    name: string;
+  }[];
+  overview: string;
+  releaseDate: number;
+  title: string;
+  vote: number;
+}
+
 interface IRequest {
   id: number;
   poster_path: string;
@@ -35,9 +50,12 @@ interface IRequest {
 
 const Main: React.FC = () => {
   const [movies, setMovies] = useState<IMovies[]>([]);
+  const [actualMovie, setActualMovie] = useState<IMovie>();
+
+  const navigation = useNavigation();
 
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadData = async () => {
       await api
         .get('/movie/top_rated')
         .then(response => {
@@ -56,13 +74,39 @@ const Main: React.FC = () => {
         })
         .catch(error => console.log(error));
     };
-    loadProducts();
+    loadData();
   }, []);
 
-  function renderMovies({ item }) {
+  useEffect(() => {
+    actualMovie &&
+      navigation.navigate('MovieDetails', { MovieData: actualMovie });
+  }, [actualMovie, navigation]);
+
+  const loadMovie = async (id: number) => {
+    await api
+      .get(`/movie/${id}`)
+      .then(response => {
+        const movie = response.data;
+        const dataMovie: IMovie = {
+          id: movie.id,
+          poster: movie.backdrop_path,
+          budget: movie.budget,
+          overview: movie.overview,
+          genres: movie.genres,
+          releaseDate: new Date(movie.release_date).getFullYear(),
+          title: movie.title,
+          vote: movie.vote_average,
+        };
+
+        setActualMovie(dataMovie);
+      })
+      .catch(error => console.log(error));
+  };
+
+  function renderMovies({ item }: any) {
     return (
       <Movie key={item.id}>
-        <TouchOpacity onPress={() => {}}>
+        <TouchOpacity onPress={() => loadMovie(item.id)}>
           <PosterImage
             source={{
               uri: `https://image.tmdb.org/t/p/w154${item.poster}`,
@@ -101,7 +145,6 @@ const Main: React.FC = () => {
       <FlatList
         horizontal
         data={movies}
-        // extraData={this.pros}
         keyExtractor={item => String(item.id)}
         renderItem={renderMovies}
       />

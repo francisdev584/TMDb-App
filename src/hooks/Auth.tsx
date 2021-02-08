@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import React, {
   createContext,
   useCallback,
@@ -6,22 +7,25 @@ import React, {
   useEffect,
 } from 'react';
 import AsyncStorage from '@react-native-community/async-storage';
+
 import api from '../services/api';
 
 interface AuthState {
-  token: string;
-  user: Record<string, unknown>;
+  // eslint-disable-next-line camelcase
+  session_id: string;
 }
 
 interface SignInCredentials {
-  email: string;
+  username: string;
   password: string;
+  request_token: string;
 }
 
 interface AuthContextData {
-  user: Record<string, unknown>;
+  user: string;
   signIn(credentials: SignInCredentials): Promise<void>;
   signOut(): void;
+  isSignIn(): boolean;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -31,40 +35,56 @@ const AuthProvider: React.FC = ({ children }: any) => {
 
   useEffect(() => {
     async function loadStorageData(): Promise<void> {
-      const [token, user] = await AsyncStorage.multiGet([
-        '@GoBarber:token',
-        '@GoBarber:user',
-      ]);
+      const [token] = await AsyncStorage.multiGet(['@TMDb:token']);
 
-      if (token[1] && user[1]) {
-        setData({ token: token[1], user: JSON.parse(user[1]) });
+      if (token[1]) {
+        setData({ session_id: token[1] });
       }
     }
 
     loadStorageData();
   }, []);
 
-  const signIn = useCallback(async ({ email, password }) => {
-    const response = await api.post('sessions', { email, password });
+  const signIn = useCallback(async ({ username, password, request_token }) => {
+    try {
+      await api.post('/authentication/token/validate_with_login', {
+        username,
+        password,
+        request_token,
+      });
+      const { session_id: token }: AuthState = await api.post(
+        '/authentication/token/new',
+        {
+          request_token,
+        },
+      );
+      await AsyncStorage.multiSet([['@TMDb:token', token]]);
 
-    const { token, user } = response.data;
-
-    await AsyncStorage.multiSet([
-      ['@GoBarber:token', token],
-      ['@GoBarber:user', JSON.stringify(user)],
-    ]);
-
-    setData({ token, user });
+      setData({ session_id: token });
+    } catch (error) {
+      console.log(error);
+    }
   }, []);
 
   const signOut = useCallback(async () => {
-    await AsyncStorage.multiRemove(['@GoBarber:token', '@GoBarber:user']);
+    await api.delete('/authentication/session', {
+      data: {
+        session_id: data.session_id,
+      },
+    });
+    await AsyncStorage.multiRemove(['@TMDb:token']);
 
     setData({} as AuthState);
-  }, []);
+  }, [data.session_id]);
+
+  const isSignIn = useCallback(() => {
+    return Boolean(data.session_id);
+  }, [data.session_id]);
 
   return (
-    <AuthContext.Provider value={{ user: data.user, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ user: data.session_id, signIn, signOut, isSignIn }}
+    >
       {children}
     </AuthContext.Provider>
   );

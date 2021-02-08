@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import React, { useCallback, useRef } from 'react';
 import {
   Image,
@@ -12,6 +13,8 @@ import { Form } from '@unform/mobile';
 import { FormHandles } from '@unform/core';
 import * as Yup from 'yup';
 
+import api from '../../services/api';
+
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import logoImg from '../../assets/logo.png';
@@ -22,8 +25,12 @@ import getValidationErrors from '../../utils/getValidationErrors';
 import { Container, Title } from './styles';
 
 interface SignInFormData {
-  email: string;
+  username: string;
   password: string;
+}
+
+interface SignInRequestToken {
+  request_token: string;
 }
 
 const SignIn: React.FC = () => {
@@ -40,18 +47,24 @@ const SignIn: React.FC = () => {
         formRef.current?.setErrors({});
 
         const schema = Yup.object().shape({
-          email: Yup.string()
-            .required('E-mail obrigatório')
-            .email('Digite um e-mail válido'),
+          username: Yup.string().required('Usuário obrigatório'),
           password: Yup.string().required('Senha obrigatória'),
         });
 
         await schema.validate(data, { abortEarly: false });
+        // eslint-disable-next-line camelcase
+        const { request_token }: SignInRequestToken = await api.get(
+          '/authentication/token/new',
+        );
 
         await signIn({
-          email: data.email,
+          username: data.username,
           password: data.password,
+          request_token,
         });
+        console.log('chegou aqui');
+
+        navigation.navigate('Main');
       } catch (err) {
         if (err instanceof Yup.ValidationError) {
           const errors = getValidationErrors(err);
@@ -60,6 +73,7 @@ const SignIn: React.FC = () => {
 
           return;
         }
+        console.log(err.status_message);
 
         Alert.alert(
           'Erro na autenticação',
@@ -67,7 +81,7 @@ const SignIn: React.FC = () => {
         );
       }
     },
-    [signIn],
+    [signIn, navigation],
   );
 
   return (
@@ -93,9 +107,9 @@ const SignIn: React.FC = () => {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 returnKeyType="next"
-                icon="mail"
-                name="email"
-                placeholder="E-mail"
+                icon="user"
+                name="username"
+                placeholder="Usuário"
                 onSubmitEditing={() => {
                   passwordInputRef.current?.focus();
                 }}
