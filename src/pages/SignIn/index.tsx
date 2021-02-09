@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -7,6 +7,7 @@ import {
   View,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Form } from '@unform/mobile';
@@ -22,7 +23,7 @@ import logoImg from '../../assets/logo.png';
 import { useAuth } from '../../hooks/Auth';
 import getValidationErrors from '../../utils/getValidationErrors';
 
-import { Container, Title } from './styles';
+import { Container, Title, LoadingView } from './styles';
 
 interface SignInFormData {
   username: string;
@@ -30,16 +31,20 @@ interface SignInFormData {
 }
 
 interface SignInRequestToken {
-  request_token: string;
+  data: { request_token: string };
 }
 
 const SignIn: React.FC = () => {
+  const [loading, setLoading] = useState<boolean>(false);
   const navigation = useNavigation();
   const passwordInputRef = useRef<TextInput>(null);
   const formRef = useRef<FormHandles>(null);
 
-  const { signIn, user } = useAuth();
-  console.log(user);
+  const { user, signIn } = useAuth();
+
+  useEffect(() => {
+    () => user && navigation.navigate('Main');
+  }, [user, navigation]);
 
   const handleSignIn = useCallback(
     async (data: SignInFormData) => {
@@ -53,19 +58,23 @@ const SignIn: React.FC = () => {
 
         await schema.validate(data, { abortEarly: false });
         // eslint-disable-next-line camelcase
-        const { request_token }: SignInRequestToken = await api.get(
-          '/authentication/token/new',
-        );
+        setLoading(true);
+
+        const {
+          data: { request_token },
+        }: SignInRequestToken = await api.get('/authentication/token/new');
 
         await signIn({
           username: data.username,
           password: data.password,
           request_token,
         });
-        console.log('chegou aqui');
 
+        setLoading(false);
         navigation.navigate('Main');
       } catch (err) {
+        setLoading(false);
+
         if (err instanceof Yup.ValidationError) {
           const errors = getValidationErrors(err);
 
@@ -92,6 +101,18 @@ const SignIn: React.FC = () => {
           contentContainerStyle={{ flex: 1 }}
         >
           <Container>
+            <LoadingView transparent animationType="slide" visible={loading}>
+              <ActivityIndicator
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                animating={loading}
+                size="large"
+                color="#00ff00"
+              />
+            </LoadingView>
             <Image source={logoImg} />
             <View>
               <Title>Faça seu logon</Title>

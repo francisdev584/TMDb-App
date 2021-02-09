@@ -1,10 +1,14 @@
 /* eslint-disable camelcase */
 import React, { useState, useEffect, useCallback } from 'react';
-import { FlatList } from 'react-native';
+import { FlatList, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ProgressCircle from 'react-native-progress-circle';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView } from 'react-native-gesture-handler';
 
 import api from '../../services/api';
+
+import CarouselCards from '../../components/CarouselCards';
 
 import {
   Container,
@@ -49,7 +53,8 @@ interface IRequest {
 }
 
 const Main: React.FC = () => {
-  const [movies, setMovies] = useState<IMovies[]>([]);
+  const [moviesTopRated, setMoviesTopRated] = useState<IMovies[]>([]);
+  const [moviesNowPlaying, setMoviesNowPlaying] = useState<IMovies[]>([]);
   const [actualMovie, setActualMovie] = useState<IMovie>();
 
   const navigation = useNavigation();
@@ -60,7 +65,7 @@ const Main: React.FC = () => {
         .get('/movie/top_rated')
         .then(response => {
           const { results } = response.data;
-          const dataMovies = results.map((result: IRequest) => {
+          const dataMoviesTR = results.map((result: IRequest) => {
             return {
               id: result.id,
               poster: result.poster_path,
@@ -69,8 +74,22 @@ const Main: React.FC = () => {
               vote: result.vote_average,
             };
           });
-
-          setMovies(dataMovies);
+          setMoviesTopRated(dataMoviesTR);
+        })
+        .then(async () => {
+          await api.get('/movie/now_playing').then(response => {
+            const { results } = response.data;
+            const dataMoviesNP = results.map((result: IRequest) => {
+              return {
+                id: result.id,
+                poster: result.poster_path,
+                releaseDate: new Date(result.release_date).getFullYear(),
+                title: result.title,
+                vote: result.vote_average,
+              };
+            });
+            setMoviesNowPlaying(dataMoviesNP);
+          });
         })
         .catch(error => console.log(error));
     };
@@ -103,7 +122,43 @@ const Main: React.FC = () => {
       .catch(error => console.log(error));
   };
 
-  function renderMovies({ item }: any) {
+  function renderMoviesTopRated({ item }: any) {
+    return (
+      <Movie key={item.id}>
+        <TouchOpacity onPress={() => loadMovie(item.id)}>
+          <PosterImage
+            source={{
+              uri: `https://image.tmdb.org/t/p/original/${item.poster}`,
+            }}
+          />
+
+          <ProgressCircle
+            percent={item.vote * 10}
+            radius={18}
+            borderWidth={4}
+            color="#90cea1"
+            shadowColor="#575656"
+            bgColor="#0d253f"
+            outerCircleStyle={{
+              position: 'relative',
+              marginTop: -20,
+              marginLeft: 4,
+              alignItems: 'center',
+            }}
+          >
+            <Details>
+              {item.vote * 10}
+              <Percent>%</Percent>
+            </Details>
+          </ProgressCircle>
+          <MovieTitle>{item.title}</MovieTitle>
+          <ReleaseYear>{`Lançado em ${item.releaseDate}`}</ReleaseYear>
+        </TouchOpacity>
+      </Movie>
+    );
+  }
+
+  function renderMoviesNowPlaying({ item }: any) {
     return (
       <Movie key={item.id}>
         <TouchOpacity onPress={() => loadMovie(item.id)}>
@@ -140,15 +195,29 @@ const Main: React.FC = () => {
   }
 
   return (
-    <Container>
-      <CategoryTitle>Filmes mais bem avaliados</CategoryTitle>
-      <FlatList
-        horizontal
-        data={movies}
-        keyExtractor={item => String(item.id)}
-        renderItem={renderMovies}
-      />
-    </Container>
+    <ScrollView style={{ flex: 1 }}>
+      <SafeAreaView>
+        <StatusBar />
+        <Container>
+          <CarouselCards />
+          <CategoryTitle>Filmes mais bem avaliados</CategoryTitle>
+          <FlatList
+            horizontal
+            data={moviesTopRated}
+            keyExtractor={item => String(item.id)}
+            renderItem={renderMoviesTopRated}
+          />
+
+          <CategoryTitle>Estão assistindo no momento</CategoryTitle>
+          <FlatList
+            horizontal
+            data={moviesNowPlaying}
+            keyExtractor={item => String(item.id)}
+            renderItem={renderMoviesNowPlaying}
+          />
+        </Container>
+      </SafeAreaView>
+    </ScrollView>
   );
 };
 

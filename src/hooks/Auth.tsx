@@ -25,45 +25,50 @@ interface AuthContextData {
   user: string;
   signIn(credentials: SignInCredentials): Promise<void>;
   signOut(): void;
-  isSignIn(): boolean;
+  isSignIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 const AuthProvider: React.FC = ({ children }: any) => {
   const [data, setData] = useState<AuthState>({} as AuthState);
-
+  const [isSignIn, setIsSignIn] = useState<boolean>(false);
   useEffect(() => {
     async function loadStorageData(): Promise<void> {
       const [token] = await AsyncStorage.multiGet(['@TMDb:token']);
 
       if (token[1]) {
         setData({ session_id: token[1] });
+        setIsSignIn(true);
       }
     }
 
+    console.log('Auth==> ', data);
     loadStorageData();
   }, []);
 
   const signIn = useCallback(async ({ username, password, request_token }) => {
-    try {
-      await api.post('/authentication/token/validate_with_login', {
-        username,
-        password,
-        request_token,
-      });
-      const { session_id: token }: AuthState = await api.post(
-        '/authentication/token/new',
-        {
-          request_token,
-        },
-      );
-      await AsyncStorage.multiSet([['@TMDb:token', token]]);
+    const {
+      data: { request_token: reqToken },
+    } = await api.post('/authentication/token/validate_with_login', {
+      username,
+      password,
+      request_token,
+    });
 
-      setData({ session_id: token });
-    } catch (error) {
-      console.log(error);
-    }
+    console.log('reqToken==> ', reqToken);
+    const {
+      data: { session_id },
+    } = await api.post('/authentication/session/new', {
+      request_token: reqToken,
+    });
+    console.log('session_id==> ', session_id);
+    await AsyncStorage.multiSet([['@TMDb:token', session_id]]);
+
+    setData({ session_id });
+    setIsSignIn(true);
+
+    setIsSignIn(false);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -75,10 +80,7 @@ const AuthProvider: React.FC = ({ children }: any) => {
     await AsyncStorage.multiRemove(['@TMDb:token']);
 
     setData({} as AuthState);
-  }, [data.session_id]);
-
-  const isSignIn = useCallback(() => {
-    return Boolean(data.session_id);
+    setIsSignIn(false);
   }, [data.session_id]);
 
   return (
