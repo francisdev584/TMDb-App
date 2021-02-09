@@ -59,7 +59,7 @@ Para clonar e executar este App, você irá precisar: [Git](https://git-scm.com)
 $ git clone https://github.com/francis584/TMDb-App
 
 # Go into the repository
-$ cd francis584/TMDb-App
+$ cd TMDb-App
 
 # Install dependencies
 $ yarn install
