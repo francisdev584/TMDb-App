@@ -1,7 +1,6 @@
 import React from 'react';
 import { Image, Button } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import SignIn from '../pages/SignIn';
 import Main from '../pages/Main';
 import MovieDetails from '../pages/MovieDetails';
