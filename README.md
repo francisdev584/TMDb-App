@@ -52,14 +52,14 @@ Esse projeto foi desenvolvido como um teste para uma vaga com as seguintes tecno
 
 ## :information_source: How To Use
 
-To clone and run this application, you'll need [Git](https://git-scm.com), [Node.js v10.16][nodejs] or higher + [Yarn v1.13][yarn] or higher installed on your computer. From your command line:
+Para clonar e executar este App, você irá precisar: [Git](https://git-scm.com), [Node.js v10.16][nodejs] ou maior + [Yarn v1.13][yarn] ou maior instalado no seu computador. Do seu terminal de comando:
 
 ```bash
 # Clone this repository
-$ git clone https://github.com/francis584/rocketshoesmobile
+$ git clone https://github.com/francis584/TMDb-App
 
 # Go into the repository
-$ cd rocketshoesmobile
+$ cd francis584/TMDb-App
 
 # Install dependencies
 $ yarn install
